@@ -1,0 +1,63 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using SmartCareAI.Services
+@inject IntakeService Intake
+
+<PageTitle>SmartCare AI</PageTitle>
+
+<h1>SmartCare AI</h1>
+<p>Fictional demo only. Draft for staff review, not medical advice.</p>
+
+<label for="note">Fictional intake note</label>
+<textarea id="note" class="form-control" rows="3"
+          maxlength="1000" @bind="note"></textarea>
+<button class="btn btn-primary mt-3" @onclick="Analyze" disabled="@busy">
+    @(busy ? "Drafting..." : "Draft intake note")
+</button>
+
+@if (error is not null)
+{
+    <p class="text-danger mt-3">@error</p>
+}
+
+@if (draft is not null)
+{
+    <div class="mt-4">
+        <h2>Draft for staff review</h2>
+        <p><strong>Summary:</strong> @draft.Summary</p>
+        <p><strong>Reported symptoms:</strong> @string.Join(", ", draft.Symptoms)</p>
+        <p><strong>Duration:</strong> @draft.Duration</p>
+        <p><strong>Missing details:</strong> @string.Join(", ", draft.AdditionalInformation)</p>
+    </div>
+}
+
+@code {
+    private string note =
+        "Yesterday evening lendhu cough irukku. Appointment book panna vandhen.";
+    private IntakeRecord? draft;
+    private string? error;
+    private bool busy;
+
+    private async Task Analyze()
+    {
+        draft = null;
+        error = null;
+        if (string.IsNullOrWhiteSpace(note) || note.Length > 1000)
+        {
+            error = "Enter a fictional note of 1–1000 characters.";
+            return;
+        }
+
+        busy = true;
+        try { draft = await Intake.AnalyzeAsync(note); }
+        catch (System.ClientModel.ClientResultException ex)
+        {
+            error = $"Foundry request failed (HTTP {ex.Status}).";
+        }
+        catch (Exception)
+        {
+            error = "Could not create a draft. Check the Foundry settings.";
+        }
+        finally { busy = false; }
+    }
+}
